@@ -1,0 +1,36 @@
+{
+  "name": "pushup-challenge-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord pour suivre un défi de 100 pompes par jour",
+  "homepage": "https://github.com/LouisMoretti/pushup-challenge-bot#readme",
+  "bugs": {
+    "url": "https://github.com/LouisMoretti/pushup-challenge-bot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LouisMoretti/pushup-challenge-bot.git"
+  },
+  "license": "ISC",
+  "author": "Louis Moretti",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "deploy": "node --env-file=.env src/deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "drizzle-orm": "^0.45.2",
+    "luxon": "^3.7.2",
+    "node-cron": "^4.2.1",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^10.5.0"
+  }
+}
