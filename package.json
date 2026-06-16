@@ -19,7 +19,10 @@
     },
     "scripts": {
         "start": "node --env-file=.env src/index.js",
-        "deploy": "node --env-file=.env src/deploy-commands.js"
+        "deploy": "node --env-file=.env src/deploy-commands.js",
+        "db:push": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs push",
+        "db:generate": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs generate",
+        "db:migrate": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs migrate"
     },
     "dependencies": {
         "discord.js": "^14.26.4",

@@ -40,6 +40,7 @@ try {
     const data = await rest.put(
         // Routes.applicationGuildCommands(clientId, guildId),
         Routes.applicationCommands(clientId),
+        { body: commands },
     );
     console.log(
         `Successfully reloaded ${data.length} application (/) commands.`,

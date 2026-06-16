@@ -6,6 +6,8 @@
     "prettier.configPath": ".prettierrc.cjs",
     "prettier.singleQuote": true,
 
+    "todo-tree.ripgrep": "/run/current-system/sw/bin/rg",
+
     "eslint.useFlatConfig": true,
     "eslint.validate": [
         "javascript",
