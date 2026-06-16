@@ -1,8 +1,11 @@
 services:
     bot:
         build: .
-        env_file:
-            - .env
+        environment:
+            APP_ID: ${APP_ID}
+            DISCORD_TOKEN: ${DISCORD_TOKEN}
+            PUBLIC_KEY: ${PUBLIC_KEY}
+            DATABASE_URL: ${DATABASE_URL}
         depends_on:
             - db
 
