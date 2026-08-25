@@ -141,9 +141,13 @@ export async function autocomplete(interaction) {
         }
     }
 
+    const now = DateTime.now();
     const choices = [...startsWith, ...contains]
         .slice(0, maxAutocompleteChoices)
-        .map((zone) => ({ name: zone, value: zone }));
+        .map((zone) => ({
+            name: `${zone} (${now.setZone(zone).toFormat('\u0027UTC\u0027ZZ')})`,
+            value: zone,
+        }));
 
     await interaction.respond(choices);
 }
