@@ -8,7 +8,7 @@ import { DateTime } from 'luxon';
 import { setupGuild } from '../../db/queries.js';
 
 const reminderTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-const maxAutocompleteChoices = 25;
+const maxAutocompleteChoices = 10;
 
 function resolveTimezoneInput(input) {
     const zone = DateTime.now().setZone(input);
