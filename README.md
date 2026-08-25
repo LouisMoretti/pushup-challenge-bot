@@ -6,49 +6,52 @@ docker compose run --rm bot node src/deploy-commands.js
 docker compose up -d
 ```
 
-## Sauvegardes
+## Backups
 
-Le service `db-backup` (démarré avec `docker compose up -d`) effectue un dump
-compressé (`pg_dump -Fc`) de la base à intervalle régulier. Opération strictement
-en lecture seule : aucune écriture, aucune modification de schéma.
+The `db-backup` service (started with `docker compose up -d`) takes a
+compressed dump (`pg_dump -Fc`) of the database at a regular interval.
+Strictly read-only: no writes, no schema changes.
 
-- Emplacement des dumps : volume nommé `backups_data`, monté sur `/backups`
-  dans le conteneur `db-backup` (jamais dans `postgres_data`). Fichiers
-  `pushup_challenge_AAAAMMJJ_HHMMSS.dump`.
-- Réglages optionnels via `.env` :
-    - `BACKUP_INTERVAL_SECONDS` : secondes entre deux dumps (défaut `86400`,
-      soit quotidien).
-    - `BACKUP_RETENTION_DAYS` : conservation en jours (défaut `7`, les dumps
-      plus anciens sont purgés automatiquement).
+- Dump location: named volume `backups_data`, mounted at `/backups` in the
+  `db-backup` container (never inside `postgres_data`). Files are named
+  `pushup_challenge_YYYYMMDD_HHMMSS.dump`.
+- Optional settings via `.env`:
+    - `BACKUP_INTERVAL_SECONDS`: seconds between two dumps (default `86400`,
+      i.e. daily). Note that a dump is also taken on every container start.
+    - `BACKUP_RETENTION_DAYS`: days to keep dumps (default `7`; older dumps
+      are pruned automatically).
+
+Every archive is verified with `pg_restore -l` right after the dump; a corrupt
+or truncated file is deleted instead of being kept as a false backup.
 
 ```bash
-# Lister les dumps
+# List dumps
 docker compose exec db-backup ls -lh /backups
 
-# Copier un dump hors du volume (à faire régulièrement : offsite)
-docker compose cp db-backup:/backups/<fichier>.dump ./<fichier>.dump
+# Copy a dump off the host regularly (offsite — cloud sync tracked in #10)
+docker compose cp db-backup:/backups/<file>.dump ./<file>.dump
 ```
 
-### Restauration
+### Restore
 
-`--clean --if-exists` supprime les objets existants avant de les recréer :
-le contenu actuel de la base est remplacé par celui du dump.
+`--clean --if-exists` drops existing objects before recreating them: the
+current database content is replaced by the dump content.
 
 ```bash
-docker compose stop bot  # éviter toute écriture pendant la restauration
+docker compose stop bot  # avoid writes during the restore
 docker compose exec db-backup sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" \
     pg_restore --clean --if-exists --no-owner \
-    -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" /backups/<fichier>.dump'
+    -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" /backups/<file>.dump'
 docker compose start bot
 ```
 
-Depuis une copie locale du fichier :
+From a local copy of the file:
 
 ```bash
 docker compose exec -T db pg_restore --clean --if-exists --no-owner \
-    -U pushup -d pushup_challenge < ./<fichier>.dump
+    -U pushup -d pushup_challenge < ./<file>.dump
 ```
 
-**Attention :** ne jamais lancer `docker compose down -v` — cela supprimerait
-le volume `postgres_data` **et** le volume `backups_data` (données et
-sauvegardes définitivement perdues).
+**Warning:** never run `docker compose down -v` — it would delete the
+`postgres_data` volume **and** the `backups_data` volume (data and backups
+permanently lost).

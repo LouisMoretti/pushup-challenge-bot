@@ -50,7 +50,8 @@ services:
                     done
                     stamp="$$(date +%Y%m%d_%H%M%S)"
                     file="/backups/$${POSTGRES_DB}_$${stamp}.dump"
-                    if pg_dump -h db -U "$${POSTGRES_USER}" -Fc -f "$$file" "$${POSTGRES_DB}"; then
+                    if pg_dump -h db -U "$${POSTGRES_USER}" -Fc -f "$$file" "$${POSTGRES_DB}" \
+                        && pg_restore -l "$$file" >/dev/null 2>&1; then
                         echo "[db-backup] dump ok: $$file ($$(du -h "$$file" | cut -f1))"
                     else
                         rm -f "$$file"
