@@ -404,6 +404,39 @@ export async function getGlobalStats(guildId, exerciseType) {
     return { ok: true, stats };
 }
 
+export async function getUserAllStats(guildId, userId) {
+    const total = sql`coalesce(sum(${entries.count}), 0)`.mapWith(Number);
+    const loggedDays = sql`count(${entries.id})`.mapWith(Number);
+    const bestDay = sql`coalesce(max(${entries.count}), 0)`.mapWith(Number);
+
+    const rows = await db
+        .select({
+            exerciseType: entries.exerciseType,
+            total,
+            loggedDays,
+            bestDay,
+        })
+        .from(participants)
+        .leftJoin(entries, eq(entries.participantId, participants.id))
+        .where(
+            and(
+                eq(participants.guildId, guildId),
+                eq(participants.userId, userId),
+                eq(participants.active, true),
+            ),
+        )
+        .groupBy(entries.exerciseType);
+
+    if (rows.length === 0) {
+        return { ok: false, reason: 'not_joined' };
+    }
+
+    return {
+        ok: true,
+        rows: rows.filter((row) => row.exerciseType !== null),
+    };
+}
+
 export async function getUserStats(guildId, userId, exerciseType) {
     if (!isExerciseType(exerciseType)) {
         return { ok: false, reason: 'invalid_exercise_type' };
