@@ -35,7 +35,7 @@ export async function execute(interaction) {
             if (now < expirationTime) {
                 const expiredTimestamp = Math.round(expirationTime / 1_000);
                 return interaction.reply({
-                    content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
+                    content: `Patiente un peu, \`${command.data.name}\` est en cooldown. Réutilisable <t:${expiredTimestamp}:R>.`,
                     flags: MessageFlags.Ephemeral,
                 });
             }
@@ -54,12 +54,14 @@ export async function execute(interaction) {
             console.error(error);
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp({
-                    content: 'There was an error while executing this command!',
+                    content:
+                        'Une erreur est survenue pendant l’exécution de cette commande !',
                     flags: MessageFlags.Ephemeral,
                 });
             } else {
                 await interaction.reply({
-                    content: 'There was an error while executing this command!',
+                    content:
+                        'Une erreur est survenue pendant l’exécution de cette commande !',
                     flags: MessageFlags.Ephemeral,
                 });
             }
