@@ -1,10 +1,62 @@
 # pushup-challenge-bot
 
+A Discord bot that runs **fitness challenges inside a guild**: members join, log
+their daily reps (pushups, squats, crunches, running), and the bot keeps score —
+daily recaps in a tracked channel, leaderboards, per-user and global stats.
+Everything is stored per-guild in Postgres.
+
+Built with discord.js v14 (pure ESM, Node >= 22.12), Drizzle ORM and Postgres 17.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `/setup` | Configure the challenge for the server (ManageGuild required) |
+| `/join` / `/leave` | Join or leave the challenge |
+| `/log add\|set` | Log today's reps for an exercise type |
+| `/admin-log add\|remove\|set` | Correct another participant's count (ManageGuild) |
+| `/stats user\|global` | Per-user or server-wide statistics |
+| `/leaderboard` | Rankings per exercise type |
+
+Daily recap: posted at the configured time (`reminderTime`, guild timezone) in
+the tracked channel, listing every participant's total against `dailyGoal`.
+
+## Deployment
+
 ```bash
 docker compose build bot
 docker compose run --rm bot node src/deploy-commands.js
 docker compose up -d
 ```
+
+Inside the container, `src/start_bot.sh` re-registers slash commands and applies
+the schema (`drizzle-kit push`) before starting the bot. Copy `.env.example` to
+`.env` and fill in your Discord credentials and database settings first.
+
+## Local development
+
+Requirements: Node >= 22.12, Docker.
+
+```bash
+cp .env.example .env      # fill APP_ID, DISCORD_TOKEN, POSTGRES_*
+docker compose up -d db   # local Postgres on localhost:5432
+npm ci
+```
+
+Gotchas:
+
+- Every npm script loads env via `node --env-file=.env` — bare `node src/index.js`
+  will not work.
+- `.env.example` points `DATABASE_URL` at the compose hostname `db`. When running
+  npm scripts on the host, use `localhost` instead (port 5432 is published).
+  Switch it back to `db` before `docker compose up`.
+- Slash command changes need `npm run deploy`. Registration is global by default
+  (up to an hour to propagate); set `GUILD_ID` in `.env` during development to
+  register instantly in one guild.
+- Verification is `npx eslint .` (Prettier rules run through ESLint). There is no
+  test suite yet.
+
+More architecture notes live in [AGENTS.md](AGENTS.md).
 
 ## Backups
 
