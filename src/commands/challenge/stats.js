@@ -2,6 +2,7 @@ import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {
     EXERCISE_TYPES,
     getGlobalStats,
+    getUserAllStats,
     getUserStats,
 } from '../../db/queries.js';
 
@@ -10,12 +11,12 @@ const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
     value: exerciseType,
 }));
 
-function addExerciseOption(command) {
+function addExerciseOption(command, { required = true } = {}) {
     return command.addStringOption((option) =>
         option
             .setName('exercise')
             .setDescription('Type d’exercice.')
-            .setRequired(true)
+            .setRequired(required)
             .addChoices(...exerciseChoices),
     );
 }
@@ -35,6 +36,7 @@ export const data = new SlashCommandBuilder()
             subcommand
                 .setName('user')
                 .setDescription('Stats d’un participant.'),
+            { required: false },
         ).addUserOption((option) =>
             option
                 .setName('user')
@@ -45,7 +47,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
-    const exerciseType = interaction.options.getString('exercise', true);
+    const exerciseType = interaction.options.getString('exercise');
 
     if (subcommand === 'global') {
         const result = await getGlobalStats(interaction.guildId, exerciseType);
@@ -71,6 +73,45 @@ export async function execute(interaction) {
     }
 
     const user = interaction.options.getUser('user') ?? interaction.user;
+
+    if (!exerciseType) {
+        const result = await getUserAllStats(interaction.guildId, user.id);
+
+        if (!result.ok) {
+            await interaction.reply({
+                content: `${user} n’est pas inscrit au challenge.`,
+                flags: MessageFlags.Ephemeral,
+            });
+            return;
+        }
+
+        const statsByType = new Map(
+            result.rows.map((row) => [row.exerciseType, row]),
+        );
+        let grandTotal = 0;
+
+        const lines = Object.values(EXERCISE_TYPES).map((type) => {
+            const { total, loggedDays, bestDay } = statsByType.get(type) ?? {
+                total: 0,
+                loggedDays: 0,
+                bestDay: 0,
+            };
+            grandTotal += total;
+
+            return [
+                `${type} : total ${total}`,
+                `${loggedDays} jours`,
+                `meilleur ${bestDay}`,
+            ].join(' — ');
+        });
+        lines.push(`TOTAL : ${grandTotal}`);
+
+        await interaction.reply({
+            content: [`Stats de ${user}`, ...lines].join('\n'),
+        });
+        return;
+    }
+
     const result = await getUserStats(
         interaction.guildId,
         user.id,
