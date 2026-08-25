@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { DateTime } from 'luxon';
 import { db } from './client.js';
 import {
@@ -124,34 +124,52 @@ async function applyExerciseChange({
         entryDate,
         exerciseType,
     );
-    const beforeCount = entry.count;
-    let afterCount;
 
-    if (action === 'add' || action === 'admin_add') {
-        afterCount = beforeCount + amount;
-    } else if (action === 'remove' || action === 'admin_remove') {
-        afterCount = Math.max(beforeCount - amount, 0);
-    } else {
-        afterCount = amount;
-    }
+    // Lock the row so concurrent commands cannot lose updates.
+    const { updatedEntry, beforeCount, afterCount } = await db.transaction(
+        async (tx) => {
+            const [locked] = await tx
+                .select({ count: entries.count })
+                .from(entries)
+                .where(eq(entries.id, entry.id))
+                .for('update');
 
-    const [updatedEntry] = await db
-        .update(entries)
-        .set({
-            count: afterCount,
-            updatedAt: new Date(),
-        })
-        .where(eq(entries.id, entry.id))
-        .returning();
+            const previousCount = locked.count;
+            let nextCount;
 
-    await db.insert(entryEvents).values({
-        entryId: entry.id,
-        actorUserId,
-        action,
-        amount,
-        beforeCount,
-        afterCount,
-    });
+            if (action === 'add' || action === 'admin_add') {
+                nextCount = previousCount + amount;
+            } else if (action === 'remove' || action === 'admin_remove') {
+                nextCount = Math.max(previousCount - amount, 0);
+            } else {
+                nextCount = amount;
+            }
+
+            const [changedEntry] = await tx
+                .update(entries)
+                .set({
+                    count: nextCount,
+                    updatedAt: new Date(),
+                })
+                .where(eq(entries.id, entry.id))
+                .returning();
+
+            await tx.insert(entryEvents).values({
+                entryId: entry.id,
+                actorUserId,
+                action,
+                amount,
+                beforeCount: previousCount,
+                afterCount: nextCount,
+            });
+
+            return {
+                updatedEntry: changedEntry,
+                beforeCount: previousCount,
+                afterCount: nextCount,
+            };
+        },
+    );
 
     return {
         ok: true,
@@ -416,4 +434,77 @@ export async function getUserStats(guildId, userId, exerciseType) {
         );
 
     return { ok: true, stats };
+}
+
+// --- Daily recap ---
+function isRecapDue(guild) {
+    const now = DateTime.now().setZone(guild.timezone);
+    const today = now.toISODate();
+
+    if (guild.lastRecapDate === today) {
+        return false;
+    }
+
+    if (now.toFormat('HH:mm') !== guild.reminderTime) {
+        return false;
+    }
+
+    if (guild.startDate) {
+        const lastDay = DateTime.fromISO(guild.startDate, {
+            zone: guild.timezone,
+        })
+            .plus({ days: guild.durationDays - 1 })
+            .toISODate();
+
+        if (today > lastDay) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+export async function getDueRecapGuilds() {
+    const configuredGuilds = await db
+        .select()
+        .from(guilds)
+        .where(isNotNull(guilds.trackedChannelId));
+
+    return configuredGuilds.filter(isRecapDue);
+}
+
+export async function getDailyProgress(guild) {
+    const entryDate = dateInGuildTimezone(guild);
+    const total = sql`coalesce(sum(${entries.count}), 0)`.mapWith(Number);
+
+    const rows = await db
+        .select({
+            userId: participants.userId,
+            total,
+        })
+        .from(participants)
+        .leftJoin(
+            entries,
+            and(
+                eq(entries.participantId, participants.id),
+                eq(entries.entryDate, entryDate),
+            ),
+        )
+        .where(
+            and(
+                eq(participants.guildId, guild.guildId),
+                eq(participants.active, true),
+            ),
+        )
+        .groupBy(participants.userId)
+        .orderBy(desc(total));
+
+    return { entryDate, rows };
+}
+
+export async function markRecapSent(guildId, recapDate) {
+    await db
+        .update(guilds)
+        .set({ lastRecapDate: recapDate })
+        .where(eq(guilds.guildId, guildId));
 }

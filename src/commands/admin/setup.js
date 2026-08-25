@@ -4,7 +4,10 @@ import {
     PermissionFlagsBits,
     SlashCommandBuilder,
 } from 'discord.js';
+import { DateTime } from 'luxon';
 import { setupGuild } from '../../db/queries.js';
+
+const reminderTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const data = new SlashCommandBuilder()
     .setName('setup')
@@ -52,6 +55,22 @@ export async function execute(interaction) {
         interaction.options.getString('timezone') ?? 'Europe/Paris';
     const reminderTime =
         interaction.options.getString('reminder_time') ?? '20:00';
+
+    if (!DateTime.now().setZone(timezone).isValid) {
+        await interaction.reply({
+            content: `Fuseau horaire invalide : \`${timezone}\`. Utilise un nom IANA comme \`Europe/Paris\`.`,
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    if (!reminderTimePattern.test(reminderTime)) {
+        await interaction.reply({
+            content: `Heure de rappel invalide : \`${reminderTime}\`. Format attendu : \`HH:mm\`.`,
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
 
     await setupGuild({
         guildId: interaction.guildId,

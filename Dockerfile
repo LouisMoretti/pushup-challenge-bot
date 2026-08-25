@@ -12,4 +12,6 @@ RUN chmod +x src/start_bot.sh
 
 ENV NODE_ENV=production
 
+USER node
+
 CMD ["src/start_bot.sh"]
