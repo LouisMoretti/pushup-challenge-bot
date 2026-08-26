@@ -1,35 +1,10 @@
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
-import { DateTime } from 'luxon';
 import { db } from './client.js';
 import { entries, guilds, participants } from './schema.js';
 import { dateInGuildTimezone } from './helpers.js';
+import { isRecapDue } from '../utils/recap-time.js';
 
-function isRecapDue(guild) {
-    const now = DateTime.now().setZone(guild.timezone);
-    const today = now.toISODate();
-
-    if (guild.lastRecapDate === today) {
-        return false;
-    }
-
-    if (now.toFormat('HH:mm') !== guild.reminderTime) {
-        return false;
-    }
-
-    if (guild.startDate) {
-        const lastDay = DateTime.fromISO(guild.startDate, {
-            zone: guild.timezone,
-        })
-            .plus({ days: guild.durationDays - 1 })
-            .toISODate();
-
-        if (today > lastDay) {
-            return false;
-        }
-    }
-
-    return true;
-}
+export { isRecapDue };
 
 export async function getDueRecapGuilds() {
     const configuredGuilds = await db

@@ -22,5 +22,8 @@ jobs:
             - name: Lint (ESLint + Prettier)
               run: npx eslint .
 
+            - name: Unit tests (node --test)
+              run: npm test
+
             - name: Security audit (production deps)
               run: npm audit --omit=dev
