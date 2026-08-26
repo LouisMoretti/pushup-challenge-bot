@@ -100,8 +100,37 @@ or truncated file is deleted instead of being kept as a false backup.
 # List dumps
 docker compose exec db-backup ls -lh /backups
 
-# Copy a dump off the host regularly (offsite — cloud sync tracked in #10)
+# Copy a dump off the host manually (see Offsite sync below for automatic sync)
 docker compose cp db-backup:/backups/<file>.dump ./<file>.dump
+```
+
+### Offsite sync
+
+The `db-offsite` service pushes recent dumps offsite once a day with
+[rclone](https://rclone.org/): only files newer than 48h are uploaded, and
+copies older than `OFFSITE_RETENTION_DAYS` (default 30) are pruned on the
+remote (`remote:pushup-backups`).
+
+It expects a `rclone.conf` file at the repository root defining a remote named
+`remote` (any rclone-supported provider works). Create it once on any machine
+with rclone installed:
+
+```bash
+rclone config   # pick your provider, name the remote "remote"
+cp ~/.config/rclone/rclone.conf ./rclone.conf
+```
+
+The file holds provider credentials: it is already git-ignored — never commit
+it. Optional settings via `.env`:
+
+- `OFFSITE_INTERVAL_SECONDS`: seconds between two syncs (default `86400`,
+  i.e. daily).
+- `OFFSITE_RETENTION_DAYS`: days to keep dumps on the remote (default `30`;
+  older remote copies are pruned automatically).
+
+```bash
+# Verify what was pushed
+docker compose exec db-offsite rclone lsl remote:pushup-backups
 ```
 
 ### Restore
