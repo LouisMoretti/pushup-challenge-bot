@@ -1,10 +1,6 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
-import { EXERCISE_TYPES, getLeaderboard } from '../../db/queries.js';
-
-const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
-    name: exerciseType,
-    value: exerciseType,
-}));
+import { getLeaderboard } from '../../db/queries.js';
+import { exerciseChoices } from '../../utils/exercises.js';
 
 export const data = new SlashCommandBuilder()
     .setName('leaderboard')

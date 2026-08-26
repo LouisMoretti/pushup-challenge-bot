@@ -2,6 +2,10 @@ services:
     bot:
         build: .
         restart: unless-stopped
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
         environment:
             APP_ID: ${APP_ID}
             DISCORD_TOKEN: ${DISCORD_TOKEN}
@@ -13,6 +17,10 @@ services:
     db:
         image: postgres:17-alpine
         restart: unless-stopped
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
         environment:
             POSTGRES_USER: ${POSTGRES_USER}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -25,6 +33,10 @@ services:
     db-backup:
         image: postgres:17-alpine
         restart: unless-stopped
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
         depends_on:
             - db
         environment:

@@ -1,4 +1,5 @@
 import { Collection, Events, MessageFlags } from 'discord.js';
+import { DEFAULT_COOLDOWN_SECONDS } from '../../config.js';
 
 export const name = Events.InteractionCreate;
 
@@ -24,7 +25,7 @@ export async function execute(interaction) {
 
         const now = Date.now();
         const timestamps = cooldowns.get(command.data.name);
-        const defaultCooldownDuration = 3;
+        const defaultCooldownDuration = DEFAULT_COOLDOWN_SECONDS;
         const cooldownAmount =
             (command.cooldown ?? defaultCooldownDuration) * 1_000;
 
