@@ -7,7 +7,9 @@ import {
     getGuild,
     getOrCreateEntry,
     isExerciseType,
+    isGuildConfigured,
 } from './helpers.js';
+import { getGuildGoal } from './participation.js';
 
 async function applyExerciseChange({
     guildId,
@@ -23,7 +25,7 @@ async function applyExerciseChange({
 
     const guild = await getGuild(guildId);
 
-    if (!guild) {
+    if (!isGuildConfigured(guild)) {
         return { ok: false, reason: 'guild_not_configured' };
     }
 
@@ -39,6 +41,8 @@ async function applyExerciseChange({
         entryDate,
         exerciseType,
     );
+
+    const exerciseGoal = await getGuildGoal(guildId, exerciseType);
 
     // Lock the row so concurrent commands cannot lose updates.
     const { updatedEntry, beforeCount, afterCount } = await db.transaction(
@@ -94,8 +98,11 @@ async function applyExerciseChange({
         entryDate,
         beforeCount,
         afterCount,
+        goal: exerciseGoal,
         reachedGoal:
-            beforeCount < guild.dailyGoal && afterCount >= guild.dailyGoal,
+            exerciseGoal !== null &&
+            beforeCount < exerciseGoal &&
+            afterCount >= exerciseGoal,
     };
 }
 

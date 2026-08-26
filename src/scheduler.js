@@ -1,7 +1,8 @@
 import cron from 'node-cron';
 import {
+    EXERCISE_TYPES,
     getChallengeResults,
-    getDailyProgress,
+    getDailyProgressByType,
     getDueRecapGuilds,
     getGuildsForChallengeEnd,
     markChallengeEnded,
@@ -15,14 +16,39 @@ import {
 } from './utils/challenge-end.js';
 import { isRecapLate } from './utils/recap-time.js';
 
-function buildRecapMessage(guild, progress) {
-    const lines = progress.rows.map((row) => {
-        const status =
-            row.total >= guild.dailyGoal
-                ? 'objectif atteint !'
-                : 'objectif non atteint';
+const exerciseLabels = {
+    [EXERCISE_TYPES.PUSHUP]: 'POMPES',
+    [EXERCISE_TYPES.SQUAT]: 'SQUATS',
+    [EXERCISE_TYPES.CRUNCH]: 'CRUNCH',
+    [EXERCISE_TYPES.RUNNING]: 'COURSE',
+};
 
-        return `<@${row.userId}> : ${row.total}/${guild.dailyGoal} — ${status}`;
+function buildRecapMessage(guild, progress) {
+    const goalsByType = new Map(
+        progress.goals.map((goal) => [goal.exerciseType, goal.dailyGoal]),
+    );
+
+    const countsByUser = new Map();
+
+    for (const row of progress.rows) {
+        if (!countsByUser.has(row.userId)) {
+            countsByUser.set(row.userId, new Map());
+        }
+
+        if (row.exerciseType && goalsByType.has(row.exerciseType)) {
+            countsByUser.get(row.userId).set(row.exerciseType, row.total);
+        }
+    }
+
+    const lines = [...countsByUser.entries()].map(([userId, counts]) => {
+        const parts = [...goalsByType.entries()].map(([exerciseType, goal]) => {
+            const count = counts.get(exerciseType) ?? 0;
+            const status = count >= goal ? '✅' : '❌';
+
+            return `${exerciseLabels[exerciseType]} ${count}/${goal} ${status}`;
+        });
+
+        return `<@${userId}> — ${parts.join(' · ')}`;
     });
 
     const lateTag = isRecapLate(guild) ? '(en retard) ' : '';
@@ -39,7 +65,7 @@ async function sendDueRecaps(client) {
         try {
             const channel = await client.channels.fetch(guild.trackedChannelId);
 
-            const progress = await getDailyProgress(guild);
+            const progress = await getDailyProgressByType(guild);
 
             if (progress.rows.length > 0) {
                 await channel.send(buildRecapMessage(guild, progress));
