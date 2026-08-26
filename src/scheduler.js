@@ -1,9 +1,18 @@
 import cron from 'node-cron';
 import {
+    getChallengeResults,
     getDailyProgress,
     getDueRecapGuilds,
+    getGuildsForChallengeEnd,
+    markChallengeEnded,
     markRecapSent,
 } from './db/queries.js';
+import {
+    buildChallengeEndMessage,
+    buildGoalLines,
+    buildPodiumLine,
+    getChallengeWindow,
+} from './utils/challenge-end.js';
 
 function buildRecapMessage(guild, progress) {
     const lines = progress.rows.map((row) => {
@@ -41,8 +50,63 @@ async function sendDueRecaps(client) {
     }
 }
 
+function groupGoalRowsByUser(goalRows) {
+    const goalRowsByUser = {};
+
+    for (const row of goalRows) {
+        (goalRowsByUser[row.userId] ??= []).push(row);
+    }
+
+    return goalRowsByUser;
+}
+
+async function sendChallengeEndMessages(client) {
+    const dueGuilds = await getGuildsForChallengeEnd();
+
+    for (const guild of dueGuilds) {
+        try {
+            const channel = await client.channels.fetch(guild.trackedChannelId);
+
+            const results = await getChallengeResults(guild);
+
+            if (!results.ok) {
+                continue;
+            }
+
+            const podiumRows = results.totals
+                .slice(0, 3)
+                .map((row, index) =>
+                    buildPodiumLine(index + 1, row.userId, row.total),
+                );
+
+            const goalLines = buildGoalLines(
+                groupGoalRowsByUser(results.goalRows),
+                results.dailyGoalTotal,
+            );
+
+            await channel.send(
+                buildChallengeEndMessage({
+                    window: getChallengeWindow(guild),
+                    podiumRows,
+                    goalLines,
+                }),
+            );
+
+            await markChallengeEnded(guild.guildId);
+        } catch (error) {
+            console.error(
+                `Échec du message de fin pour le serveur ${guild.guildId} :`,
+                error.message,
+            );
+        }
+    }
+}
+
 export function startScheduler(client) {
     cron.schedule('* * * * *', () => {
-        sendDueRecaps(client).catch((error) => console.error(error));
+        sendDueRecaps(client)
+            .catch((error) => console.error(error))
+            .then(() => sendChallengeEndMessages(client))
+            .catch((error) => console.error(error));
     });
 }

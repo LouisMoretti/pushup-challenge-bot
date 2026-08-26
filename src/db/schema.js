@@ -39,6 +39,13 @@ export const guilds = pgTable('guilds', {
     timezone: text('timezone').notNull().default('Europe/Paris'),
     reminderTime: text('reminder_time').notNull().default('20:00'),
     lastRecapDate: date('last_recap_date'),
+    /**
+     * Marker set once the end-of-challenge message has been posted (#20).
+     * Null = message pas encore posté. Backfill: NULL partout (additif pur).
+     * NOTE (#19): un futur /setup restart devra remettre cette colonne à
+     * NULL pour permettre le message d’un nouveau challenge.
+     */
+    challengeEndedAt: timestamp('challenge_ended_at'),
 });
 
 export const guildExerciseGoals = pgTable(
