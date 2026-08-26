@@ -12,7 +12,9 @@ export async function getDueRecapGuilds() {
         .from(guilds)
         .where(isNotNull(guilds.trackedChannelId));
 
-    return configuredGuilds.filter(isRecapDue);
+    // filter passes (element, index, array): a bare isRecapDue reference
+    // would receive the index as `now` and crash on now.setZone.
+    return configuredGuilds.filter((guild) => isRecapDue(guild));
 }
 
 export async function getDailyProgress(guild) {

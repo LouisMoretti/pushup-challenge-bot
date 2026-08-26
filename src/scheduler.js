@@ -4,6 +4,7 @@ import {
     getDueRecapGuilds,
     markRecapSent,
 } from './db/queries.js';
+import { isRecapLate } from './utils/recap-time.js';
 
 function buildRecapMessage(guild, progress) {
     const lines = progress.rows.map((row) => {
@@ -15,7 +16,11 @@ function buildRecapMessage(guild, progress) {
         return `<@${row.userId}> : ${row.total}/${guild.dailyGoal} — ${status}`;
     });
 
-    return [`Récap du jour (${progress.entryDate}) :`, ...lines].join('\n');
+    const lateTag = isRecapLate(guild) ? '(en retard) ' : '';
+
+    return [`Récap du jour ${lateTag}(${progress.entryDate}) :`, ...lines].join(
+        '\n',
+    );
 }
 
 async function sendDueRecaps(client) {
