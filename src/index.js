@@ -8,6 +8,8 @@ import {
     // MessageFlags,
 } from 'discord.js';
 
+import { loadCommands } from './loaders/commands.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Create a new client instance
@@ -17,25 +19,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
-const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
-
-for (const folder of commandFolders) {
-    const commandsPath = path.join(foldersPath, folder);
-    const commandFiles = fs
-        .readdirSync(commandsPath)
-        .filter((file) => file.endsWith('.js'));
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = await import(pathToFileURL(filePath).href);
-        if ('data' in command && 'execute' in command) {
-            client.commands.set(command.data.name, command);
-        } else {
-            console.log(
-                `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
-            );
-        }
-    }
+const commands = await loadCommands();
+for (const command of commands) {
+    client.commands.set(command.data.name, command);
 }
 
 // --- Events ---
