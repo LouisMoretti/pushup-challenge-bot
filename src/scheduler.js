@@ -74,6 +74,7 @@ async function sendChallengeEndMessages(client) {
             }
 
             const podiumRows = results.totals
+                .filter((row) => row.total > 0)
                 .slice(0, 3)
                 .map((row, index) =>
                     buildPodiumLine(index + 1, row.userId, row.total),
