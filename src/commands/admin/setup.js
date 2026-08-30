@@ -6,29 +6,12 @@ import {
 } from 'discord.js';
 import { DateTime } from 'luxon';
 import { setupGuild } from '../../db/queries.js';
+import {
+    reminderTimePattern,
+    resolveTimezoneInput,
+} from '../../utils/timezones.js';
 
-const reminderTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 const maxAutocompleteChoices = 10;
-
-function resolveTimezoneInput(input) {
-    const zone = DateTime.now().setZone(input);
-    if (zone.isValid) {
-        return { ok: true, timezone: zone.zoneName };
-    }
-
-    const needle = input.split('/').pop().toLowerCase();
-    const matches = Intl.supportedValuesOf('timeZone').filter(
-        (candidate) => candidate.split('/').pop().toLowerCase() === needle,
-    );
-
-    if (matches.length === 1) {
-        return { ok: true, timezone: matches[0] };
-    }
-    if (matches.length > 1) {
-        return { ok: false, candidates: matches };
-    }
-    return { ok: false, candidates: [] };
-}
 
 export const data = new SlashCommandBuilder()
     .setName('setup')

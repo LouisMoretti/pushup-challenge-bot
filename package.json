@@ -20,8 +20,8 @@
     "scripts": {
         "start": "node --env-file=.env src/index.js",
         "deploy": "node --env-file=.env src/deploy-commands.js",
-        "test": "node --test",
-        "db:push": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs push"
+        "db:push": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs push",
+        "test": "node --test \"test/**/*.test.js\""
     },
     "dependencies": {
         "discord.js": "^14.27.0",
