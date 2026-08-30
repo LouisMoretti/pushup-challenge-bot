@@ -1,7 +1,9 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
+import { DateTime } from 'luxon';
 import { db } from './client.js';
-import { entries, participants } from './schema.js';
-import { getActiveParticipant, isExerciseType } from './helpers.js';
+import { entries, guildExerciseGoals, participants } from './schema.js';
+import { computeStreak } from '../utils/streaks.js';
+import { getActiveParticipant, getGuild, isExerciseType } from './helpers.js';
 
 export async function getLeaderboard(guildId, exerciseType) {
     if (!isExerciseType(exerciseType)) {
@@ -137,4 +139,97 @@ export async function getUserStats(guildId, userId, exerciseType) {
         );
 
     return { ok: true, stats };
+}
+
+/**
+ * Consecutive successful days ending today (or yesterday when today is
+ * not yet successful), bounded by the challenge window. A day is
+ * successful iff every configured exercise type reaches its own goal.
+ */
+export async function getUserStreak(guildId, userId) {
+    const participant = await getActiveParticipant(guildId, userId);
+
+    if (!participant) {
+        return { ok: false, reason: 'not_joined' };
+    }
+
+    const guild = await getGuild(guildId);
+
+    if (!guild) {
+        return { ok: false, reason: 'guild_not_configured' };
+    }
+
+    const goalRows = await db
+        .select({
+            exerciseType: guildExerciseGoals.exerciseType,
+            dailyGoal: guildExerciseGoals.dailyGoal,
+        })
+        .from(guildExerciseGoals)
+        .where(eq(guildExerciseGoals.guildId, guildId));
+
+    // No goals configured => no successful day is even possible.
+    if (goalRows.length === 0) {
+        return { ok: true, streak: 0 };
+    }
+
+    const goalsByType = Object.fromEntries(
+        goalRows.map((row) => [row.exerciseType, row.dailyGoal]),
+    );
+
+    const conditions = [eq(entries.participantId, participant.id)];
+
+    if (guild.startDate) {
+        conditions.push(gte(entries.entryDate, guild.startDate));
+    }
+
+    const rows = await db
+        .select({
+            entryDate: entries.entryDate,
+            exerciseType: entries.exerciseType,
+            count: entries.count,
+        })
+        .from(entries)
+        .where(and(...conditions));
+
+    const entriesByDate = {};
+
+    for (const row of rows) {
+        entriesByDate[row.entryDate] ??= {};
+        entriesByDate[row.entryDate][row.exerciseType] =
+            (entriesByDate[row.entryDate][row.exerciseType] ?? 0) + row.count;
+    }
+
+    const streak = computeStreak({
+        entriesByDate,
+        goalsByType,
+        startDate: guild.startDate,
+        durationDays: guild.durationDays,
+        now: DateTime.now().setZone(guild.timezone),
+    });
+
+    return { ok: true, streak };
+}
+
+export async function getGuildStreaks(guildId) {
+    const activeParticipants = await db
+        .select({ userId: participants.userId })
+        .from(participants)
+        .where(
+            and(
+                eq(participants.guildId, guildId),
+                eq(participants.active, true),
+            ),
+        );
+
+    const streaksByUser = new Map();
+
+    for (const { userId } of activeParticipants) {
+        const result = await getUserStreak(guildId, userId);
+
+        if (result.ok) {
+            streaksByUser.set(userId, result.streak);
+        }
+    }
+
+    return streaksByUser;
 }

@@ -4,6 +4,7 @@ import {
     getChallengeResults,
     getDailyProgressByType,
     getDueRecapGuilds,
+    getGuildStreaks,
     getGuildsForChallengeEnd,
     markChallengeEnded,
     markRecapSent,
@@ -23,7 +24,7 @@ const exerciseLabels = {
     [EXERCISE_TYPES.RUNNING]: 'COURSE',
 };
 
-function buildRecapMessage(guild, progress) {
+function buildRecapMessage(guild, progress, streaksByUser) {
     const goalsByType = new Map(
         progress.goals.map((goal) => [goal.exerciseType, goal.dailyGoal]),
     );
@@ -48,7 +49,13 @@ function buildRecapMessage(guild, progress) {
             return `${exerciseLabels[exerciseType]} ${count}/${goal} ${status}`;
         });
 
-        return `<@${userId}> — ${parts.join(' · ')}`;
+        const streak = streaksByUser.get(userId) ?? 0;
+        const streakLabel = streak === 1 ? 'jour' : 'jours';
+
+        return [
+            `<@${userId}> — ${parts.join(' · ')}`,
+            `série : ${streak} ${streakLabel}`,
+        ].join('\n');
     });
 
     const lateTag = isRecapLate(guild) ? '(en retard) ' : '';
@@ -66,9 +73,12 @@ async function sendDueRecaps(client) {
             const channel = await client.channels.fetch(guild.trackedChannelId);
 
             const progress = await getDailyProgressByType(guild);
+            const streaksByUser = await getGuildStreaks(guild.guildId);
 
             if (progress.rows.length > 0) {
-                await channel.send(buildRecapMessage(guild, progress));
+                await channel.send(
+                    buildRecapMessage(guild, progress, streaksByUser),
+                );
             }
 
             await markRecapSent(guild.guildId, progress.entryDate);

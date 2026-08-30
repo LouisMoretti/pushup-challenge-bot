@@ -4,6 +4,7 @@ import {
     getGlobalStats,
     getUserAllStats,
     getUserStats,
+    getUserStreak,
 } from '../../db/queries.js';
 
 const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
@@ -19,6 +20,20 @@ function addExerciseOption(command, { required = true } = {}) {
             .setRequired(required)
             .addChoices(...exerciseChoices),
     );
+}
+
+function formatStreakLine(streak) {
+    return `Série : ${streak} ${streak === 1 ? 'jour' : 'jours'}`;
+}
+
+async function getStreakLineOrEmpty(guildId, userId) {
+    const streakResult = await getUserStreak(guildId, userId);
+
+    if (!streakResult.ok) {
+        return null;
+    }
+
+    return formatStreakLine(streakResult.streak);
 }
 
 export const data = new SlashCommandBuilder()
@@ -106,6 +121,15 @@ export async function execute(interaction) {
         });
         lines.push(`TOTAL : ${grandTotal}`);
 
+        const streakLine = await getStreakLineOrEmpty(
+            interaction.guildId,
+            user.id,
+        );
+
+        if (streakLine) {
+            lines.push(streakLine);
+        }
+
         await interaction.reply({
             content: [`Stats de ${user}`, ...lines].join('\n'),
         });
@@ -131,12 +155,20 @@ export async function execute(interaction) {
         return;
     }
 
+    const contentLines = [
+        `Stats ${exerciseType} de ${user}`,
+        `Total: ${result.stats.total}`,
+        `Jours loggés: ${result.stats.loggedDays}`,
+        `Meilleur jour: ${result.stats.bestDay}`,
+    ];
+
+    const streakLine = await getStreakLineOrEmpty(interaction.guildId, user.id);
+
+    if (streakLine) {
+        contentLines.push(streakLine);
+    }
+
     await interaction.reply({
-        content: [
-            `Stats ${exerciseType} de ${user}`,
-            `Total: ${result.stats.total}`,
-            `Jours loggés: ${result.stats.loggedDays}`,
-            `Meilleur jour: ${result.stats.bestDay}`,
-        ].join('\n'),
+        content: contentLines.join('\n'),
     });
 }
