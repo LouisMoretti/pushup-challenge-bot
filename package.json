@@ -20,6 +20,7 @@
     "scripts": {
         "start": "node --env-file=.env src/index.js",
         "deploy": "node --env-file=.env src/deploy-commands.js",
+        "test": "node --test",
         "db:push": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs push"
     },
     "dependencies": {
