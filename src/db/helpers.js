@@ -32,6 +32,10 @@ export function dateInGuildTimezone(guild) {
     return DateTime.now().setZone(guild.timezone).toISODate();
 }
 
+export function isGuildConfigured(guild) {
+    return Boolean(guild?.startDate);
+}
+
 export async function getActiveParticipant(guildId, userId) {
     const [participant] = await db
         .select()

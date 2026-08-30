@@ -85,7 +85,7 @@ export async function execute(interaction) {
     }
 
     const congrats = result.reachedGoal
-        ? ` Objectif de ${result.guild.dailyGoal} atteint, bravo !`
+        ? ` Objectif de ${result.goal} ${exerciseType} atteint, bravo !`
         : '';
 
     await interaction.reply({

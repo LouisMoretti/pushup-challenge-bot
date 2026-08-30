@@ -11,7 +11,8 @@ Built with discord.js v14 (pure ESM, Node >= 22.12), Drizzle ORM and Postgres 17
 
 | Command | Purpose |
 |---|---|
-| `/setup` | Configure the challenge for the server (ManageGuild required) |
+| `/setup` | Configure the challenge: tracked channel, duration, timezone, reminder time and the four per-exercise daily goals (`goal_pushup`, `goal_squat`, `goal_crunch`, `goal_running`) — all options required; refused if a configuration already exists (ManageGuild) |
+| `/config view\|set\|delete` | Inspect the current configuration, adjust a single setting (`set channel\|duration_days\|timezone\|reminder_time\|goal`) or delete it — deleting keeps every participant's history and lets `/setup` run again (ManageGuild) |
 | `/join` / `/leave` | Join or leave the challenge |
 | `/log add\|set` | Log today's reps for an exercise type |
 | `/admin-log add\|remove\|set` | Correct another participant's count (ManageGuild) |
@@ -19,7 +20,8 @@ Built with discord.js v14 (pure ESM, Node >= 22.12), Drizzle ORM and Postgres 17
 | `/leaderboard` | Rankings per exercise type |
 
 Daily recap: posted at the configured time (`reminderTime`, guild timezone) in
-the tracked channel, listing every participant's total against `dailyGoal`.
+the tracked channel, listing every active participant with one line per
+exercise type against that exercise's configured goal.
 
 ## Deployment
 

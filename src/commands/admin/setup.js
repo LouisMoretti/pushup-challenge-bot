@@ -5,7 +5,7 @@ import {
     SlashCommandBuilder,
 } from 'discord.js';
 import { DateTime } from 'luxon';
-import { setupGuild } from '../../db/queries.js';
+import { getGuild, isGuildConfigured, setupGuild } from '../../db/queries.js';
 import {
     reminderTimePattern,
     resolveTimezoneInput,
@@ -26,40 +26,64 @@ export const data = new SlashCommandBuilder()
     )
     .addIntegerOption((option) =>
         option
-            .setName('daily_goal')
-            .setDescription('Objectif quotidien.')
-            .setMinValue(1)
-            .setRequired(false),
-    )
-    .addIntegerOption((option) =>
-        option
             .setName('duration_days')
             .setDescription('Durée du challenge en jours.')
             .setMinValue(1)
-            .setRequired(false),
+            .setRequired(true),
     )
     .addStringOption((option) =>
         option
             .setName('timezone')
             .setDescription('Fuseau horaire du serveur.')
             .setAutocomplete(true)
-            .setRequired(false),
+            .setRequired(true),
     )
     .addStringOption((option) =>
         option
             .setName('reminder_time')
             .setDescription('Heure de rappel, format HH:mm.')
-            .setRequired(false),
+            .setRequired(true),
+    )
+    .addIntegerOption((option) =>
+        option
+            .setName('goal_pushup')
+            .setDescription('Objectif quotidien de pompes.')
+            .setMinValue(1)
+            .setRequired(true),
+    )
+    .addIntegerOption((option) =>
+        option
+            .setName('goal_squat')
+            .setDescription('Objectif quotidien de squats.')
+            .setMinValue(1)
+            .setRequired(true),
+    )
+    .addIntegerOption((option) =>
+        option
+            .setName('goal_crunch')
+            .setDescription('Objectif quotidien de crunchs.')
+            .setMinValue(1)
+            .setRequired(true),
+    )
+    .addIntegerOption((option) =>
+        option
+            .setName('goal_running')
+            .setDescription('Objectif quotidien de course.')
+            .setMinValue(1)
+            .setRequired(true),
     );
 
 export async function execute(interaction) {
     const channel = interaction.options.getChannel('channel', true);
-    const dailyGoal = interaction.options.getInteger('daily_goal') ?? 100;
-    const durationDays = interaction.options.getInteger('duration_days') ?? 30;
-    const timezone =
-        interaction.options.getString('timezone') ?? 'Europe/Paris';
-    const reminderTime =
-        interaction.options.getString('reminder_time') ?? '20:00';
+    const durationDays = interaction.options.getInteger('duration_days', true);
+    const timezone = interaction.options.getString('timezone', true);
+    const reminderTime = interaction.options.getString('reminder_time', true);
+    const goals = {
+        PUSHUP: interaction.options.getInteger('goal_pushup', true),
+        SQUAT: interaction.options.getInteger('goal_squat', true),
+        CRUNCH: interaction.options.getInteger('goal_crunch', true),
+        RUNNING: interaction.options.getInteger('goal_running', true),
+    };
 
     const resolved = resolveTimezoneInput(timezone);
     if (!resolved.ok) {
@@ -92,17 +116,33 @@ export async function execute(interaction) {
         return;
     }
 
+    const existingGuild = await getGuild(interaction.guildId);
+
+    if (isGuildConfigured(existingGuild)) {
+        await interaction.reply({
+            content:
+                'Un challenge existe déjà sur ce serveur. Supprime-le avec `/config delete` avant d’en recréer un.',
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
     await setupGuild({
         guildId: interaction.guildId,
         trackedChannelId: channel.id,
-        dailyGoal,
         durationDays,
         timezone: normalizedTimezone,
         reminderTime,
+        goals,
     });
 
     await interaction.reply({
-        content: `Challenge configuré dans ${channel}. Objectif: ${dailyGoal}/jour pendant ${durationDays} jours.`,
+        content: [
+            `Challenge configuré dans ${channel} pendant ${durationDays} jours.`,
+            `Fuseau horaire : \`${normalizedTimezone}\`. Rappel quotidien à ${reminderTime}.`,
+            `Objectifs — POMPES : ${goals.PUSHUP}, SQUATS : ${goals.SQUAT}, ` +
+                `CRUNCH : ${goals.CRUNCH}, COURSE : ${goals.RUNNING}.`,
+        ].join('\n'),
         flags: MessageFlags.Ephemeral,
     });
 }

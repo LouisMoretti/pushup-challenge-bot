@@ -1,7 +1,8 @@
-import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { db } from './client.js';
 import { entries, guilds, participants } from './schema.js';
 import { dateInGuildTimezone } from './helpers.js';
+import { getGuildGoals } from './participation.js';
 import { isRecapDue } from '../utils/recap-time.js';
 
 export { isRecapDue };
@@ -17,33 +18,37 @@ export async function getDueRecapGuilds() {
     return configuredGuilds.filter((guild) => isRecapDue(guild));
 }
 
-export async function getDailyProgress(guild) {
+export async function getDailyProgressByType(guild) {
     const entryDate = dateInGuildTimezone(guild);
     const total = sql`coalesce(sum(${entries.count}), 0)`.mapWith(Number);
 
-    const rows = await db
-        .select({
-            userId: participants.userId,
-            total,
-        })
-        .from(participants)
-        .leftJoin(
-            entries,
-            and(
-                eq(entries.participantId, participants.id),
-                eq(entries.entryDate, entryDate),
-            ),
-        )
-        .where(
-            and(
-                eq(participants.guildId, guild.guildId),
-                eq(participants.active, true),
-            ),
-        )
-        .groupBy(participants.userId)
-        .orderBy(desc(total));
+    const [goals, rows] = await Promise.all([
+        getGuildGoals(guild.guildId),
+        db
+            .select({
+                userId: participants.userId,
+                exerciseType: entries.exerciseType,
+                total,
+            })
+            .from(participants)
+            .leftJoin(
+                entries,
+                and(
+                    eq(entries.participantId, participants.id),
+                    eq(entries.entryDate, entryDate),
+                ),
+            )
+            .where(
+                and(
+                    eq(participants.guildId, guild.guildId),
+                    eq(participants.active, true),
+                ),
+            )
+            .groupBy(participants.userId, entries.exerciseType)
+            .orderBy(participants.userId),
+    ]);
 
-    return { entryDate, rows };
+    return { entryDate, goals, rows };
 }
 
 export async function markRecapSent(guildId, recapDate) {

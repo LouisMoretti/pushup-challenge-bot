@@ -6,6 +6,7 @@ export {
     getOrCreateEntry,
     getParticipant,
     isExerciseType,
+    isGuildConfigured,
 } from './helpers.js';
 export * from './participation.js';
 export * from './mutations.js';
