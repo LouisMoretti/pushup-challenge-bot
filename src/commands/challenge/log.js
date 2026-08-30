@@ -1,10 +1,6 @@
 import { MessageFlags, SlashCommandBuilder } from 'discord.js';
-import { addExercise, EXERCISE_TYPES, setExercise } from '../../db/queries.js';
-
-const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
-    name: exerciseType,
-    value: exerciseType,
-}));
+import { addExercise, setExercise } from '../../db/queries.js';
+import { exerciseChoices } from '../../utils/exercises.js';
 
 function addExerciseOption(command) {
     return command.addStringOption((option) =>

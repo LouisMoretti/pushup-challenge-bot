@@ -40,5 +40,14 @@ for (const file of eventFiles) {
     }
 }
 
+// --- Graceful shutdown ---
+for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => {
+        console.log(`Received ${signal}, shutting down...`);
+        client.destroy();
+        process.exit(0);
+    });
+}
+
 // --- Connect ---
 client.login(process.env.DISCORD_TOKEN);

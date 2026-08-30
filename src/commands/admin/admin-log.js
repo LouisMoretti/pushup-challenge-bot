@@ -7,13 +7,8 @@ import {
     adminAddExercise,
     adminRemoveExercise,
     adminSetExercise,
-    EXERCISE_TYPES,
 } from '../../db/queries.js';
-
-const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
-    name: exerciseType,
-    value: exerciseType,
-}));
+import { exerciseChoices } from '../../utils/exercises.js';
 
 function addUserExerciseAmountOptions(command, amountName) {
     return command

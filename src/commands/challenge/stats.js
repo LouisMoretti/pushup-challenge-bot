@@ -6,11 +6,7 @@ import {
     getUserStats,
     getUserStreak,
 } from '../../db/queries.js';
-
-const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
-    name: exerciseType,
-    value: exerciseType,
-}));
+import { exerciseChoices } from '../../utils/exercises.js';
 
 function addExerciseOption(command, { required = true } = {}) {
     return command.addStringOption((option) =>

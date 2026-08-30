@@ -12,6 +12,12 @@ import {
     primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import {
+    DEFAULT_DAILY_GOAL,
+    DEFAULT_DURATION_DAYS,
+    DEFAULT_REMINDER_TIME,
+    DEFAULT_TIMEZONE,
+} from '../config.js';
 
 export const EXERCISE_TYPES = {
     PUSHUP: 'PUSHUP',
@@ -29,15 +35,19 @@ export const guilds = pgTable('guilds', {
     guildId: text('guild_id').primaryKey(),
     trackedChannelId: text('tracked_channel_id'),
     startDate: date('start_date'),
-    durationDays: integer('duration_days').notNull().default(30),
+    durationDays: integer('duration_days')
+        .notNull()
+        .default(DEFAULT_DURATION_DAYS),
     /**
      * @deprecated Since issue #18. Replaced by the per-exercise goals in
      * `guildExerciseGoals`; stop reading/writing this column when UX v2
      * (#19) ships. Drop deferred.
      */
-    dailyGoal: integer('daily_goal').notNull().default(100),
-    timezone: text('timezone').notNull().default('Europe/Paris'),
-    reminderTime: text('reminder_time').notNull().default('20:00'),
+    dailyGoal: integer('daily_goal').notNull().default(DEFAULT_DAILY_GOAL),
+    timezone: text('timezone').notNull().default(DEFAULT_TIMEZONE),
+    reminderTime: text('reminder_time')
+        .notNull()
+        .default(DEFAULT_REMINDER_TIME),
     lastRecapDate: date('last_recap_date'),
     /**
      * Marker set once the end-of-challenge message has been posted (#20).
