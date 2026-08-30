@@ -87,10 +87,12 @@ describe('resolveTimezoneInput', () => {
             assert.deepEqual(resolveTimezoneInput('Atlantis/City'), {
                 ok: false,
                 candidates: [],
+                suggestions: [],
             });
             assert.deepEqual(resolveTimezoneInput('Nowhereville'), {
                 ok: false,
                 candidates: [],
+                suggestions: [],
             });
         });
 
@@ -98,15 +100,23 @@ describe('resolveTimezoneInput', () => {
             assert.deepEqual(resolveTimezoneInput(''), {
                 ok: false,
                 candidates: [],
+                suggestions: [],
             });
-            assert.deepEqual(resolveTimezoneInput('Paris/Foo'), {
+            // Below the fuzzy threshold: no silent resolution, no suggestions.
+            assert.deepEqual(resolveTimezoneInput('Pa'), {
                 ok: false,
                 candidates: [],
+                suggestions: [],
             });
-            assert.deepEqual(resolveTimezoneInput('Paris/'), {
-                ok: false,
-                candidates: [],
-            });
+        });
+
+        it('suggests near matches for a typo instead of resolving silently', () => {
+            // #22: a fuzzy input close to one zone returns it as a suggestion,
+            // never a silent resolution.
+            const result = resolveTimezoneInput('Paris/Foo');
+            assert.equal(result.ok, false);
+            assert.deepEqual(result.candidates, []);
+            assert.ok(result.suggestions.includes('Europe/Paris'));
         });
     });
 
