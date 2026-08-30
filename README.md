@@ -33,6 +33,24 @@ Inside the container, `src/start_bot.sh` re-registers slash commands and applies
 the schema (`drizzle-kit push`) before starting the bot. Copy `.env.example` to
 `.env` and fill in your Discord credentials and database settings first.
 
+### Per-exercise goals migration (#18)
+
+1. `npm run db:push -- --force` creates the new `guild_exercise_goals` table —
+   a purely additive `CREATE TABLE`, no existing data is touched. The `--force`
+   flag skips drizzle-kit's interactive confirmation so the step runs
+   unattended (verified: a bare `CREATE TABLE` applies cleanly on an existing
+   database).
+2. Backfill existing guilds:
+
+    ```bash
+    docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+        < scripts/backfill-exercise-goals.sql
+    ```
+
+3. Verify: every configured guild must have exactly 4 rows (one per exercise
+   type), each carrying the guild's previous `dailyGoal`. The script is
+   idempotent and can be re-run safely.
+
 ## Local development
 
 Requirements: Node >= 22.12, Docker.

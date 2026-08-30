@@ -8,7 +8,10 @@ import {
     serial,
     unique,
     boolean,
+    check,
+    primaryKey,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const EXERCISE_TYPES = {
     PUSHUP: 'PUSHUP',
@@ -27,11 +30,34 @@ export const guilds = pgTable('guilds', {
     trackedChannelId: text('tracked_channel_id'),
     startDate: date('start_date'),
     durationDays: integer('duration_days').notNull().default(30),
+    /**
+     * @deprecated Since issue #18. Replaced by the per-exercise goals in
+     * `guildExerciseGoals`; stop reading/writing this column when UX v2
+     * (#19) ships. Drop deferred.
+     */
     dailyGoal: integer('daily_goal').notNull().default(100),
     timezone: text('timezone').notNull().default('Europe/Paris'),
     reminderTime: text('reminder_time').notNull().default('20:00'),
     lastRecapDate: date('last_recap_date'),
 });
+
+export const guildExerciseGoals = pgTable(
+    'guild_exercise_goals',
+    {
+        guildId: text('guild_id')
+            .notNull()
+            .references(() => guilds.guildId, { onDelete: 'cascade' }),
+        exerciseType: exerciseTypeEnum('exercise_type').notNull(),
+        dailyGoal: integer('daily_goal').notNull(),
+    },
+    (table) => [
+        primaryKey({ columns: [table.guildId, table.exerciseType] }),
+        check(
+            'guild_exercise_goals_daily_goal_check',
+            sql`${table.dailyGoal} > 0`,
+        ),
+    ],
+);
 
 export const participants = pgTable(
     'participants',
