@@ -27,3 +27,38 @@ jobs:
 
             - name: Security audit (production deps)
               run: npm audit --omit=dev
+
+    integration:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:17-alpine
+                env:
+                    POSTGRES_USER: pushup
+                    POSTGRES_PASSWORD: pushup
+                    POSTGRES_DB: pushup_challenge
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        env:
+            DATABASE_URL: postgresql://pushup:pushup@localhost:5432/pushup_challenge
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Apply schema (drizzle-kit push)
+              run: npx drizzle-kit push --force
+
+            - name: Tests with Postgres (unit + integration)
+              run: npm test

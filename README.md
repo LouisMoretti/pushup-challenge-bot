@@ -73,8 +73,12 @@ Gotchas:
 - Slash command changes need `npm run deploy`. Registration is global by default
   (up to an hour to propagate); set `GUILD_ID` in `.env` during development to
   register instantly in one guild.
-- Verification is `npx eslint .` (Prettier rules run through ESLint). There is no
-  test suite yet.
+- Verification is `npx eslint .` (Prettier rules run through ESLint) plus
+  `npm test` (`node:test` unit suite, no DB needed).
+  `test/db-integration.test.js` exercises the real Postgres schema (setup
+  upsert, log/admin flows, streaks batching, backfill idempotence) and skips
+  without `DATABASE_URL`; CI runs it against a `postgres:17` service after
+  `drizzle-kit push --force`.
 
 More architecture notes live in [AGENTS.md](AGENTS.md).
 
