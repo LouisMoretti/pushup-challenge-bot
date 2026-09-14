@@ -46,6 +46,7 @@ jobs:
                     --health-retries 5
         env:
             DATABASE_URL: postgresql://pushup:pushup@localhost:5432/pushup_challenge
+            RETROCOMPAT_TEST: 1
         steps:
             - uses: actions/checkout@v4
 
