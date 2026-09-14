@@ -8,7 +8,7 @@ Discord bot (discord.js v14, Node >= 22.12, pure ESM) tracking per-guild exercis
 - `npm run start` — run the bot locally
 - `npm run deploy` — register slash commands with Discord (global, not guild-scoped; new/changed commands don't appear until this runs)
 - `npm run db:push` — apply `src/db/schema.js` directly to Postgres. The workflow is push-based: there is no `drizzle/` migrations folder and no generate/migrate scripts.
-- No lint script. Verification = `npx eslint .` (Prettier runs inside ESLint as `prettier/prettier: error`) plus `npm test` (unit suite, no DB; `test/db-integration.test.js` hits real Postgres and skips without `DATABASE_URL`).
+- No lint script. Verification = `npx eslint .` (Prettier runs inside ESLint as `prettier/prettier: error`) plus `npm test` (unit suite, no DB; `test/db-integration.test.js` hits real Postgres and skips without `DATABASE_URL`; `test/db-retrocompat.test.js` rebuilds legacy schemas and runs the real `db:push` — destructive, needs `RETROCOMPAT_TEST=1`). Files run sequentially (`--test-concurrency=1`) sharing one DB.
 - For dev, set `GUILD_ID` in `.env` before `npm run deploy` to register commands instantly in one guild; without it registration is global and takes up to an hour to propagate.
 
 ## Architecture

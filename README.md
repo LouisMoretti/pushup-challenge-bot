@@ -79,6 +79,14 @@ Gotchas:
   upsert, log/admin flows, streaks batching, backfill idempotence) and skips
   without `DATABASE_URL`; CI runs it against a `postgres:17` service after
   `drizzle-kit push --force`.
+- `test/db-retrocompat.test.js` rebuilds each historical schema from
+  `test/fixtures/schema-v*.sql`, seeds legacy rows, then runs the real
+  `drizzle-kit push --force` and checks no data is lost (counts, goals,
+  audit trail) and the app works on the migrated rows (log continuity,
+  leaderboard, streaks, end-of-challenge marker). Destructive (drops
+  tables), so it only runs with `RETROCOMPAT_TEST=1` — set in CI, opt-in
+  locally against a throwaway database. Test files run sequentially
+  (`--test-concurrency=1`) because every DB suite shares one database.
 
 More architecture notes live in [AGENTS.md](AGENTS.md).
 
