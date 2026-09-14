@@ -1,5 +1,5 @@
 import { Collection, Events, MessageFlags } from 'discord.js';
-import { DEFAULT_COOLDOWN_SECONDS } from '../../config.js';
+import { DEFAULT_COOLDOWN_SECONDS } from '../config.js';
 
 export const name = Events.InteractionCreate;
 

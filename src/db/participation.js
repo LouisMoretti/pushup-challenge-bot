@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { DateTime } from 'luxon';
 import { db } from './client.js';
 import {
@@ -29,26 +29,53 @@ export async function setupGuild({
     reminderTime,
     goals,
 }) {
+    const startDate = DateTime.now().setZone(timezone).toISODate();
+
     return db.transaction(async (tx) => {
+        // Upsert: after /config delete the guilds row still exists (history
+        // is kept), so a plain INSERT would fail with a PK violation.
+        // Re-setup also resets the recap and end-of-challenge markers so a
+        // fresh challenge can fire its recaps and end message again (#19).
         const [guild] = await tx
             .insert(guilds)
             .values({
                 guildId,
                 trackedChannelId,
-                startDate: DateTime.now().setZone(timezone).toISODate(),
+                startDate,
                 durationDays,
                 timezone,
                 reminderTime,
             })
+            .onConflictDoUpdate({
+                target: guilds.guildId,
+                set: {
+                    trackedChannelId,
+                    startDate,
+                    durationDays,
+                    timezone,
+                    reminderTime,
+                    lastRecapDate: null,
+                    challengeEndedAt: null,
+                },
+            })
             .returning();
 
-        await tx.insert(guildExerciseGoals).values(
-            Object.values(EXERCISE_TYPES).map((exerciseType) => ({
-                guildId,
-                exerciseType,
-                dailyGoal: goals[exerciseType],
-            })),
-        );
+        await tx
+            .insert(guildExerciseGoals)
+            .values(
+                Object.values(EXERCISE_TYPES).map((exerciseType) => ({
+                    guildId,
+                    exerciseType,
+                    dailyGoal: goals[exerciseType],
+                })),
+            )
+            .onConflictDoUpdate({
+                target: [
+                    guildExerciseGoals.guildId,
+                    guildExerciseGoals.exerciseType,
+                ],
+                set: { dailyGoal: sql`excluded.daily_goal` },
+            });
 
         return guild;
     });

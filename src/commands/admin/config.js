@@ -14,7 +14,10 @@ import {
     setGuildGoal,
     updateGuildSettings,
 } from '../../db/queries.js';
-import { reminderTimePattern, resolveTimezoneInput } from './setup.js';
+import {
+    reminderTimePattern,
+    resolveTimezoneInput,
+} from '../../utils/timezones.js';
 
 const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
     name: exerciseType,
