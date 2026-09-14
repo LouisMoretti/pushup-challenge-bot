@@ -18,6 +18,7 @@ import {
     reminderTimePattern,
     resolveTimezoneInput,
 } from '../../utils/timezones.js';
+import { replyInvalidTimezone } from './timezone.js';
 
 const exerciseChoices = Object.values(EXERCISE_TYPES).map((exerciseType) => ({
     name: exerciseType,
@@ -191,24 +192,7 @@ async function handleSetTimezone(interaction) {
     const resolved = resolveTimezoneInput(timezone);
 
     if (!resolved.ok) {
-        if (resolved.candidates.length > 0) {
-            await interaction.reply({
-                content: [
-                    'Plusieurs fuseaux horaires correspondent à ' +
-                        `\`${timezone}\`. Précise ton choix :`,
-                    ...resolved.candidates.map(
-                        (candidate) => `- \`${candidate}\``,
-                    ),
-                ].join('\n'),
-                flags: MessageFlags.Ephemeral,
-            });
-        } else {
-            await interaction.reply(
-                ephemeral(
-                    `Fuseau horaire invalide : \`${timezone}\`. Utilise un nom IANA comme \`Europe/Paris\`.`,
-                ),
-            );
-        }
+        await replyInvalidTimezone(interaction, timezone, resolved);
         return;
     }
 
@@ -314,4 +298,4 @@ export async function execute(interaction) {
     await handleDelete(interaction);
 }
 
-export { autocomplete } from './setup.js';
+export { autocompleteTimezone as autocomplete } from './timezone.js';
